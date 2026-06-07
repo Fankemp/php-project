@@ -190,3 +190,19 @@ php artisan api:parse \
 * Готовность к масштабированию.
 * Корректная работа с длинными идентификаторами.
 # php-project
+
+
+## 🔐 Доступы к тестовой БД (для проверки задания)
+
+База данных развернута на бесплатном хостинге Railway:
+* **Host:** `zephyr.proxy.rlwy.net`
+* **Port:** `25022`
+* **Database:** `railway`
+* **Username:** `root`
+* **Password:** `HOWJpwRVGuMZMGTBAFIxKGgwtlgHCSSu`
+
+**Названия заполненных таблиц:**
+* `orders` — Заказы
+* `sales` — Продажи
+* `incomes` — Поставки
+* `stocks` — Склады
