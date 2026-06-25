@@ -195,11 +195,11 @@ php artisan api:parse \
 ## 🔐 Доступы к тестовой БД (для проверки задания)
 
 База данных развернута на бесплатном хостинге Railway:
-* **Host:** `zephyr.proxy.rlwy.net`
-* **Port:** `25022`
-* **Database:** `railway`
-* **Username:** `root`
-* **Password:** `HOWJpwRVGuMZMGTBAFIxKGgwtlgHCSSu`
+* **Host:** `
+* **Port:** 
+* **Database:** 
+* **Username:** 
+* **Password:** 
 
 **Названия заполненных таблиц:**
 * `orders` — Заказы
