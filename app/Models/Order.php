@@ -4,11 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Scopes\TenantScope;
 
 class Order extends Model
 {
     use HasFactory;
 
-    // Эта строчка разрешает нам сохранять в базу любые поля без ограничений
-    protected $guarded = [];
+    protected $fillable = [
+        'account_id',
+    ];
+
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new TenantScope());
+    }
 }
