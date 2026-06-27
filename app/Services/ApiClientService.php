@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Token;
+use App\Services\AuthStrategies\AuthStrategyInterface;
+use App\Services\AuthStrategies\BearerStrategy;
+use App\Services\AuthStrategies\ApiKeyStrategy;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
 
 class ApiClientService
 {
@@ -18,12 +22,20 @@ class ApiClientService
         $credentials = $token->credentials;
         $baseUrl = $token->apiService->base_url ?? 'https://statistics-api.wildberries.ru';
 
-        $authHeader = $token->tokenType->code === 'bearer' ? "Bearer {$credentials}" : $credentials;
+        // 1. Выбираем стратегию в зависимости от типа токена из БД
+        $strategy = $this->resolveAuthStrategy($token->tokenType->code);
 
+        // 2. Получаем готовые заголовки авторизации
+        $authHeaders = $strategy->getHeaders($credentials);
+
+        // 3. Формируем итоговый массив заголовков
+        $headers = array_merge([
+            'Accept' => 'application/json'
+        ], $authHeaders);
+
+        // 4. Инициализируем клиент
         $this->client = Http::baseUrl($baseUrl)
             ->timeout(60)
-            // Умный retry: 3 попытки, пауза 1 секунда. 
-            // Срабатывает только при 429 (Rate Limit) или 5xx (Сервер упал)
             ->retry(3, 1000, function (\Throwable $exception) {
                 if ($exception instanceof RequestException && $exception->response) {
                     $status = $exception->response->status();
@@ -31,10 +43,19 @@ class ApiClientService
                 }
                 return false;
             })
-            ->withHeaders([
-                'Authorization' => $authHeader,
-                'Accept'        => 'application/json',
-            ]);
+            ->withHeaders($headers);
+    }
+
+    /**
+     * Фабричный метод: подбирает нужный класс стратегии
+     */
+    private function resolveAuthStrategy(string $typeCode): AuthStrategyInterface
+    {
+        return match (strtolower($typeCode)) {
+            'bearer' => new BearerStrategy(),
+            'api_key', 'standard' => new ApiKeyStrategy(),
+            default => throw new InvalidArgumentException("Неизвестный тип авторизации: {$typeCode}"),
+        };
     }
 
     /**
@@ -44,8 +65,6 @@ class ApiClientService
     public function fetch(string $endpoint, array $queryParams = []): array
     {
         $response = $this->client->get($endpoint, $queryParams);
-
-        // Laravel сам выбросит RequestException с красивым описанием ошибки, если код ответа не 2xx
         $response->throw();
 
         return $response->json() ?? [];
@@ -53,7 +72,6 @@ class ApiClientService
 
     /**
      * Запрос с пагинацией (скачивает все страницы до конца)
-     * полагаемся на реактивный retry
      * * @throws RequestException
      */
     public function fetchAllPaginated(string $endpoint, array $params = [], int $limit = 500): array
@@ -67,12 +85,9 @@ class ApiClientService
                 'page'  => $page
             ], $params));
 
-            // Если все 3 попытки ретрая провалились — падаем и отдаем ошибку логировщику
             $response->throw();
 
             $json = $response->json() ?? [];
-            
-            // Универсальное извлечение данных
             $data = $json['data'] ?? (isset($json[0]) ? $json : []);
 
             if (empty($data)) {
@@ -81,7 +96,6 @@ class ApiClientService
 
             $allData = array_merge($allData, $data);
 
-            // Если пришло меньше лимита, значит это последняя страница
             if (count($data) < $limit) {
                 break;
             }

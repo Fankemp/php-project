@@ -14,7 +14,7 @@ public function up(): void
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             // Основные идентификаторы
-            $table->string('g_number'); // Оставляем строкой (надежнее всего)
+            $table->string('g_number'); // Оставляем строкой 
             $table->bigInteger('odid')->nullable(); // ID позиции
             $table->bigInteger('nm_id')->nullable(); // Артикул 
             $table->bigInteger('income_id')->nullable(); // ID поставки
